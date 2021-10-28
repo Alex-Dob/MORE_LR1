@@ -1,16 +1,19 @@
 import numpy as np
 import scipy.stats as sps
+import matplotlib.pyplot as plt
 
 
 def FindNormRaspr(Z):
     print('\nРазбиение массива на классы')
     k = 1 + 3.32 * np.log10(n)
     delta = Z.max() - Z.min()
-    step = delta / np.round(k)
+    step = delta / int(k)
+    print('k = ', k)
+    k = k + 1
     CLASS = np.linspace(Z.min(), Z.max(), num=int(np.round(k)))
-    print('k = ', np.round(k))
-    print('Размах варьирования = ', delta)
 
+    print('Размах варьирования = ', delta)
+    print('Шаг = ', step)
     X = np.zeros(int(np.round(k)) - 1)
     B = np.zeros(int(np.round(k)) - 1)
 
@@ -21,10 +24,22 @@ def FindNormRaspr(Z):
         avg = (CLASS[i] + CLASS[i + 1]) / 2
         X[i] = avg
 
+    x = []
+    for i in range(len(CLASS) - 1):
+        x.append('[' + str(np.round(CLASS[i], 2)) + '; ' + str(np.round(CLASS[i + 1], 2)) + ']')
+
+    fig, ax = plt.subplots()
+    ticks = np.arange(0, len(CLASS) - 1)
+    ax.bar(ticks, B)
+    plt.xticks(ticks, x)
+    fig.set_figwidth(12)
+    fig.set_figheight(6)
+
+    plt.show()
     print('\n\t\tИнтервалы', '\t\t Середины интервалов', '\t Частота')
     for i in range(len(CLASS) - 1):
         print('[', np.round(CLASS[i], 5), ':', np.round(CLASS[i + 1], 5), ']\t',
-              np.round(X[i], 5), '\t\t\t\t\t', int(B[i]))
+              np.round(X[i], 5), '\t\t\t', int(B[i]))
 
     average = sum(B * X) / n
     s_ = np.sqrt((sum(B * X ** 2) - sum(B * X) ** 2 / n) / (n - 1))
@@ -38,19 +53,21 @@ def FindNormRaspr(Z):
     print('k_ = ', k_)
     print('z = ', z)
 
-    E = k_ * (1 / (2 * np.pi) * np.exp(-z ** 2 / 2))
+    E = k_ * (np.exp(-z ** 2 / 2) / ((2 * np.pi) ** 0.5))
 
     XI_2 = sum((B - E) ** 2 / E)
 
     print('\nE = ', E)
+    k = k - 1
 
     xi2 = sps.chi2.ppf(1 - 0.1, int(k) - 1 - 2)
-
+    print('XI_2 = ', XI_2)
+    print('xi2 = ', xi2)
     if XI_2 < xi2:
-        print('\nГипотеза нормальности распределения может быть принята на 10 %-ном уровне, т. к. XI_2 < xi2')
+        print('Гипотеза нормальности распределения может быть принята на 10 %-ном уровне, т. к. XI_2 < xi2')
     else:
-        print('\nГипотеза нормальности распределения отвергается, т. к. XI_2 > xi2')
-
+        print('Гипотеза нормальности распределения отвергается, т. к. XI_2 > xi2')
+    k = k + 1
     F_E = np.zeros(int(np.round(k)) - 1)
     F_B = np.zeros(int(np.round(k)) - 1)
 
@@ -63,7 +80,9 @@ def FindNormRaspr(Z):
             F_B[i] = B[i] + F_B[i - 1]
 
     D = np.max(F_B - F_E) / n
-    D_ = 0.218
+    D_ = 0.189
+    print('\nD = ', D)
+    print('D_ = ', D_)
     if D < D_:
         print('Гипотеза нормальности распределения может быть принята на 10 %-ном уровне, т. к. D < D_')
     else:
@@ -73,13 +92,16 @@ def FindNormRaspr(Z):
 Z = np.genfromtxt('Variant_04.txt', delimiter="\n")
 DEL = []
 print(Z)
+
+plt.plot(Z)
+plt.show()
 n = 0
 s2 = _s = s = average = 0
 m1 = m3 = m4 = 0
 v = 0
 t1 = t2 = 0
 tau = 1
-while t1 < tau:
+while t2 < tau:
     n = len(Z)
     average = Z.mean()
     s2 = Z.var()
@@ -92,9 +114,9 @@ while t1 < tau:
     d_max = abs(Z - average).max()
     tau = d_max / _s
 
-    print("average = ", average)
+    print("x = ", average)
     print("s2 =", s2)
-    print("s =", s)
+    print("sqrt(s2) =", s)
     print("_s =", _s)
     print("m1 =", m1)
     print("m3 =", m3)
@@ -116,7 +138,7 @@ while t1 < tau:
     print('t1 = ', t1)
     print('t2 = ', t2)
 
-    if t1 < tau or t2 < tau:
+    if t2 < tau:
         x = abs(Z[0] - average)
         k = 0
         for i in range(n):
@@ -128,10 +150,12 @@ while t1 < tau:
         Z = np.delete(Z, k)
     print('\n')
 
-
 print("Отсеянные элементы:")
 print(DEL)
 print("\nПосле отсева грубой погршености получим:")
+
+plt.plot(Z)
+plt.show()
 print(np.sort(Z))
 
 g1 = g2 = 0
@@ -157,11 +181,11 @@ if abs(G1) <= 3 * S_G1 and abs(G2) <= 5 * S_G2:
     print('\n', np.round(abs(G1), 2), ' <= ', np.round(3 * S_G1, 2),
           '\tи\t', np.round(abs(G2), 2), ' <= ', np.round(5 * S_G2, 2))
     print('- соблюдение этих условий говорит о возможности ',
-          'принятия гипотезы нормального распрераспределения')
+          '\nпринятия гипотезы нормального распрераспределения')
 
 #Z = 1 / np.sqrt(Z)
 #Z = 1 / Z
-#Z = Z ** 1.5
-#Z = Z ** 2
-Z = np.log10(Z + 0.1) * 10 ** 0.1
+# Z = Z ** 1.5
+# Z = Z ** 2
+#Z = np.log(Z + 1.5)* 100
 FindNormRaspr(Z)
